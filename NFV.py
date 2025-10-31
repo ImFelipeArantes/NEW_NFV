@@ -52,6 +52,7 @@ tecnologia_capacity = pd.read_excel('./arquivos/tecnologia_capacity.xlsx')
 capacity_funil = pd.read_excel('./arquivos/capacity_funil.xlsx')
 estacoes_newteia = pd.read_excel('./arquivos/lista_estacoes_newteia.xlsx')
 municipio_localidade = pd.read_excel('./arquivos/municipio_localidade.xlsx')
+consulta_banda = pd.read_excel('./arquivos/consulta_banda.xlsx')
 
 
 fechamento_teia = pd.DataFrame(columns=['sequencial','latitude','longitude','uf','cnl','facilidade','id_facilidade','provedor','id_provedor','entrega',
@@ -243,7 +244,7 @@ def tratar_sevs():
     nuvens['CAPACITY_NUVEM'] = nuvens['CAPACITY_NUVEM'].fillna(0)
 
     resumosoe['BANDA_ABORDADO'] = 0
-    resumosoe['FACILIDADE_ABORDADO'] = ''
+    resumosoe['FACILIDADE_ABORDADO'] = resumosoe['FACILIDADE_ABORDADO'].fillna('')
 
     for index, value in resumosoe.iterrows():
         aux_capacity = capacity[(capacity.NUVEM_ABORDADO == value.FACILIDADE_ABORDADO) & (capacity.ESTACAO_ENTREGA == value.ESTACAO_ENTREGA_ABORDADO)]
@@ -543,17 +544,20 @@ def tratar_sevs():
         else:
             sevs_tratar.loc[index, ['TRATADO','FACILIDADE_ACESSO','NUVEM_ACESSO','ESTACAO_ENTREGA_ACESSO','TECNOLOGIA_ACESSO','CENTRO_ROTEAMENTO']] = ''
 
+    sevs_tratar = sevs_tratar.fillna('')
+
     for index, value in sevs_tratar.iterrows():
         if value.SERVICO != 'VPE - VIP BSOD LIGHT':
-            if value.VEL > 102:
-                if value.FACILIDADE_ACESSO in facilidades[facilidades.VERIFICA_CAPACITY == 'S'].FACILIDADE.tolist():
+            if value.TECNOLOGIA_ACESSO != '':
+                if consulta_banda[consulta_banda.TECNOLOGIA == value.TECNOLOGIA_ACESSO].VEL_BBIP.values[0] < value.VEL:
+                    if value.FACILIDADE_ACESSO in facilidades[facilidades.VERIFICA_CAPACITY == 'S'].FACILIDADE.tolist():
 
-                    aux_municipio_estacao = municipio_estacao[municipio_estacao.ESTACAO == value.CENTRO_ROTEAMENTO]
-                    if len(aux_municipio_estacao) > 0:
-                        sevs_tratar.at[index,'BBIP'] = f'{aux_municipio_estacao.MUNICIPIO.values[0]}|{aux_municipio_estacao.ESTACAO.values[0]}'
-                    else:
-                        aux_estacao_uf= estacoes_uf[estacoes_uf.UF == value.UF]
-                        sevs_tratar.at[index,'BBIP'] = f'{aux_estacao_uf.MUNICIPIO.values[0]}|{aux_estacao_uf.ESTACAO.values[0]}'
+                        aux_municipio_estacao = municipio_estacao[municipio_estacao.ESTACAO == value.CENTRO_ROTEAMENTO]
+                        if len(aux_municipio_estacao) > 0:
+                            sevs_tratar.at[index,'BBIP'] = f'{aux_municipio_estacao.MUNICIPIO.values[0]}|{aux_municipio_estacao.ESTACAO.values[0]}'
+                        else:
+                            aux_estacao_uf= estacoes_uf[estacoes_uf.UF == value.UF]
+                            sevs_tratar.at[index,'BBIP'] = f'{aux_estacao_uf.MUNICIPIO.values[0]}|{aux_estacao_uf.ESTACAO.values[0]}'
         
     try:
         sevs_tratar.BBIP = sevs_tratar.BBIP.fillna('')
@@ -585,7 +589,6 @@ def tratar_sevs():
 
 
 def rodar_bbip():
-    sevs_tratar.to_excel('validacao_26_12.xlsx',index=False)
     navegador = webdriver.Chrome(service=service)
     navegador.implicitly_wait(5)
     navegador.get('http://10.100.1.30/admredes/admredes/RPVB_BLD_Cadastrar_2.asp')
@@ -593,26 +596,27 @@ def rodar_bbip():
 
     for index, value in sevs_tratar[(sevs_tratar.BBIP != '') & (sevs_tratar.TRATADO == 'X')].iterrows():
         try:
-            navegador.get('http://10.100.1.30/admredes/admredes/RPVB_BLD_Cadastrar_2.asp')
-            time.sleep(1)
-            if (value.BBIP != None) & (value.BBIP != 'BBIP') & ("ID" not in str(value.BBIP)):
-                navegador.find_element('name','cliente').send_keys(value.CLIENTE)
-                navegador.find_element('name','sev').send_keys(value.SEV)
-                municipio, estacao = value.BBIP.split('|')
-                municipio = unidecode(municipio).upper()
-                id_municipio = str(cidades[cidades.CIDADE == municipio].ID.values[0])
-                Select(navegador.find_element('id', 'combo1')).select_by_value(id_municipio)
-                Select(navegador.find_element('id', 'combo2')).select_by_visible_text(estacao)
-                if 'E-ACCESS' in value.SERVICO or 'EPL' in value.SERVICO:
-                    Select(navegador.find_element('name', 'servico')).select_by_value('EPL')
-                else:
-                    Select(navegador.find_element('name', 'servico')).select_by_value('Internet')
-                navegador.find_element('name', 'velocidade').send_keys(int(value.VEL))
-                navegador.find_element('xpath', '/html/body/div[6]/font/form/div/table[1]/tbody/tr[2]/td/table[5]/tbody/tr/td/input').click()
-                time.sleep(4)
-                id_bbip = navegador.find_element('xpath','/html/body/div[6]/font/form/div/table[1]/tbody/tr[2]/td/table[1]/tbody/tr[1]/td').text[:-4]
-                status_bbip = navegador.find_element('xpath','/html/body/div[6]/font/form/div/table[1]/tbody/tr[2]/td/table[4]/tbody/tr/td[2]/font/b').text
-                sevs_tratar.at[index,'BBIP'] = f'{id_bbip} / {status_bbip}'
+            if consulta_banda[consulta_banda.TECNOLOGIA == value.TECNOLOGIA_ACESSO].VEL_BBIP.values[0] < value.VEL:
+                navegador.get('http://10.100.1.30/admredes/admredes/RPVB_BLD_Cadastrar_2.asp')
+                time.sleep(1)
+                if (value.BBIP != None) & (value.BBIP != 'BBIP') & ("ID" not in str(value.BBIP)):
+                    navegador.find_element('name','cliente').send_keys(value.CLIENTE)
+                    navegador.find_element('name','sev').send_keys(value.SEV)
+                    municipio, estacao = value.BBIP.split('|')
+                    municipio = unidecode(municipio).upper()
+                    id_municipio = str(cidades[cidades.CIDADE == municipio].ID.values[0])
+                    Select(navegador.find_element('id', 'combo1')).select_by_value(id_municipio)
+                    Select(navegador.find_element('id', 'combo2')).select_by_visible_text(estacao)
+                    if 'E-ACCESS' in value.SERVICO or 'EPL' in value.SERVICO:
+                        Select(navegador.find_element('name', 'servico')).select_by_value('EPL')
+                    else:
+                        Select(navegador.find_element('name', 'servico')).select_by_value('Internet')
+                    navegador.find_element('name', 'velocidade').send_keys(int(value.VEL))
+                    navegador.find_element('xpath', '/html/body/div[6]/font/form/div/table[1]/tbody/tr[2]/td/table[5]/tbody/tr/td/input').click()
+                    time.sleep(4)
+                    id_bbip = navegador.find_element('xpath','/html/body/div[6]/font/form/div/table[1]/tbody/tr[2]/td/table[1]/tbody/tr[1]/td').text[:-4]
+                    status_bbip = navegador.find_element('xpath','/html/body/div[6]/font/form/div/table[1]/tbody/tr[2]/td/table[4]/tbody/tr/td[2]/font/b').text
+                    sevs_tratar.at[index,'BBIP'] = f'{id_bbip} / {status_bbip}'
         except:
             continue
 
