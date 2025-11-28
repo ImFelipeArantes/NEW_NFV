@@ -31,13 +31,15 @@ try:
     # conn = pyodbc.connect(conn_str)
     # provedor_ethernet = pd.read_sql('SELECT * FROM provedorxlocalidade_ethernet', conn)
     valores_ethernet_ = pd.read_sql('SELECT * FROM valores_terceiros_eth_filtered', engine)
+    valores_ethernet_.to_excel('valores_ethernet.xlsx',index=False)
     status = pd.read_sql('SELECT * FROM status', engine)
+    status.to_excel('status.xlsx',index=False)
     # conn.close()
     status = status.fillna('OK')
 except:
     # provedor_ethernet = pd.read_excel('./arquivos/provedorxlocalidade_ethernet.xlsx')
-    # valores_ethernet = pd.read_excel('./arquivos/valores_ethernet.xlsx')
-    # status = pd.read_excel('./arquivos/status.xlsx')
+    valores_ethernet_ = pd.read_excel('./arquivos/valores_ethernet.xlsx')
+    status = pd.read_excel('./arquivos/status.xlsx')
     pass
 
 capacity = pd.read_excel('./arquivos/capacity.xlsx')
