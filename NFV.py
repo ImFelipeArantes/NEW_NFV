@@ -445,7 +445,7 @@ def tratar_sevs():
                                 sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
                                 sevs_tratar.at[index,'NUVEM_ACESSO'] = aux_resumosoe.TERCEIROS_ETH_INFORMACAO.values[0].split('PROPRIETÁRIO ')[-1]
                                 sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe.TERCEIROS_ETH_ESTACAO_ENTREGA.values[0].split(' / ')[-1]
-                                sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = 'TERCEIROS ETH'
+                                sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = 'TERCEIRO ETH'
                                 sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = aux_resumosoe.TERCEIROS_ETH_ESTACAO_ENTREGA.values[0].split(' / ')[-1]
                                 sevs_tratar.at[index,'TRATADO'] = 'X'
                                 
@@ -711,7 +711,7 @@ def gerar_arquivos_finais():
             fechamento_teia.at[0,'sequencial'] = value.SEV
             fechamento_teia.loc[len(fechamento_teia) - 1,['latitude','longitude','uf','cnl','facilidade','id_facilidade',
             'provedor','id_provedor','entrega','id_da_sev','prazo','codigo_spe','sinalizacao_sip',
-            'protocolo_gaia','status']] = [value.LATITUDE, value.LONGITUDE, value.UF, value.CNL, value.FACILIDADE_FECHAMENTO, str(value.ID_FACILIDADE).split('.')[0],
+            'protocolo_gaia','status']] = [str(value.LATITUDE).replace('.',','), str(value.LONGITUDE).replace('.',','), value.UF, value.CNL, value.FACILIDADE_FECHAMENTO, str(value.ID_FACILIDADE).split('.')[0],
             value.EMPRESA_FACILIDADE,str(value.ID_EMPRESA_FACILIDADE).split('.')[0], value.CENTRO_ROTEAMENTO, value.ID_ANALISE, '', '','',value.PROTOCOLO_ATENDIMENTO,'1']
             try:
                 if value.FACILIDADE_ABORDADO != '':
@@ -732,7 +732,7 @@ def gerar_arquivos_finais():
                 fechamento_teia.at[len(fechamento_teia) - 1,'justificativa'] = 'FORA DE REDE'
                 fechamento_teia.at[len(fechamento_teia) - 1,'ID Justificativa'] = 1
                 fechamento_teia.at[len(fechamento_teia) - 1,'obs'] = f'FECHAMENTO NFV FASE 1/PRECO PADRAO/ ESTACAO ENTREGA {value.ESTACAO_ENTREGA_ACESSO}'
-                fechamento_teia.at[len(fechamento_teia) - 1,'tecnologia'] = 'TERCEIROS ETH'
+                fechamento_teia.at[len(fechamento_teia) - 1,'tecnologia'] = 'TERCEIRO ETH'
 
             if value.BBIP != '':
                 fechamento_teia.at[len(fechamento_teia) - 1,'bb_ip'] = value.BBIP.split(' / ')[0].split(': ')[-1]
@@ -741,7 +741,7 @@ def gerar_arquivos_finais():
             fechamento_teia.at[len(fechamento_teia),'sequencial'] = value.SEV
             fechamento_teia.loc[len(fechamento_teia) - 1,['latitude','longitude','uf','cnl','facilidade','id_facilidade',
             'provedor','id_provedor','entrega','id_da_sev','prazo','codigo_spe','sinalizacao_sip',
-            'protocolo_gaia','status']] = [value.LATITUDE, value.LONGITUDE, value.UF, value.CNL, value.FACILIDADE_FECHAMENTO, str(value.ID_FACILIDADE).split('.')[0],
+            'protocolo_gaia','status']] = [str(value.LATITUDE).replace('.',','), str(value.LONGITUDE).replace('.',','), value.UF, value.CNL, value.FACILIDADE_FECHAMENTO, str(value.ID_FACILIDADE).split('.')[0],
             value.EMPRESA_FACILIDADE,str(value.ID_EMPRESA_FACILIDADE).split('.')[0], value.CENTRO_ROTEAMENTO, value.ID_ANALISE, '', '','',value.PROTOCOLO_ATENDIMENTO,'1']
             try:
                 if value.FACILIDADE_ABORDADO != '':
@@ -762,7 +762,7 @@ def gerar_arquivos_finais():
                 fechamento_teia.at[len(fechamento_teia) - 1,'justificativa'] = 'FORA DE REDE'
                 fechamento_teia.at[len(fechamento_teia) - 1,'ID Justificativa'] = 1
                 fechamento_teia.at[len(fechamento_teia) - 1,'obs'] = f'FECHAMENTO NFV FASE 1/PRECO PADRAO/ ESTACAO ENTREGA {value.ESTACAO_ENTREGA_ACESSO}'
-                fechamento_teia.at[len(fechamento_teia) - 1,'tecnologia'] = 'TERCEIROS ETH'
+                fechamento_teia.at[len(fechamento_teia) - 1,'tecnologia'] = 'TERCEIRO ETH'
 
             if value.BBIP != '':
                 fechamento_teia.at[len(fechamento_teia) - 1,'bb_ip'] = value.BBIP.split(' / ')[0].split(': ')[-1]
