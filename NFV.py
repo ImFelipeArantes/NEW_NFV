@@ -34,12 +34,16 @@ try:
     valores_ethernet_.to_excel('valores_ethernet.xlsx',index=False)
     status = pd.read_sql('SELECT * FROM status', engine)
     status.to_excel('status.xlsx',index=False)
+    capacity_funil = pd.read_sql('SELECT * FROM capacity_funil', engine)
+    capacity_funil.to_excel('capacity_funil.xlsx',index=False)
     # conn.close()
     status = status.fillna('OK')
 except:
     # provedor_ethernet = pd.read_excel('./arquivos/provedorxlocalidade_ethernet.xlsx')
     valores_ethernet_ = pd.read_excel('./arquivos/valores_ethernet.xlsx')
     status = pd.read_excel('./arquivos/status.xlsx')
+    status = pd.read_excel('./arquivos/capacity_funil.xlsx')
+    status = status.fillna('OK')
     pass
 
 capacity = pd.read_excel('./arquivos/capacity.xlsx')
@@ -51,7 +55,6 @@ tecnologia_facilidade = pd.read_excel('./arquivos/id_tecnologia_facilidades.xlsx
 id_provedores = pd.read_excel('./arquivos/id_provedores.xlsx')
 capacity_fixa = pd.read_excel('./arquivos/capacity_fixa.xlsx')
 tecnologia_capacity = pd.read_excel('./arquivos/tecnologia_capacity.xlsx')
-capacity_funil = pd.read_sql('SELECT * FROM capacity_funil', engine)
 estacoes_newteia = pd.read_excel('./arquivos/lista_estacoes_newteia.xlsx')
 municipio_localidade = pd.read_excel('./arquivos/municipio_localidade.xlsx')
 consulta_banda = pd.read_excel('./arquivos/consulta_banda.xlsx')
