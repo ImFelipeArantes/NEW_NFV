@@ -73,7 +73,10 @@ facilidades = pd.read_excel('./arquivos/facilidades_tecnologia_prioridade.xlsx')
 def arquivo_teia():
     global teia, removidas, sevs_tratar
     arquivo_entrada_sevs_teia = ctk.filedialog.askopenfilename(title='Abrir arquivo de extração do TEIA')
-    teia = pd.read_csv(arquivo_entrada_sevs_teia, sep=';')
+    try:
+        teia = pd.read_csv(arquivo_entrada_sevs_teia, sep=';')
+    except:
+        teia = pd.read_excel(arquivo_entrada_sevs_teia)
     tratamento = extracao_teia.extracaoTeia(teia)
     removidas =  tratamento.tratar_modelo_gaia(removed_sevs='S')
     sevs_tratar = teia.drop(index=teia[teia.SEV.isin(removidas)].index).reset_index(drop=True)
