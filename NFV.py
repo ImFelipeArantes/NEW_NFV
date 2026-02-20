@@ -8,6 +8,7 @@ from viabilipy.NFV import extracao_teia, tratamento_gaia
 from PIL import Image
 from sqlalchemy import create_engine
 import customtkinter as ctk
+import geopandas as gpd
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service 
@@ -31,9 +32,13 @@ try:
     # conn = pyodbc.connect(conn_str)
     # provedor_ethernet = pd.read_sql('SELECT * FROM provedorxlocalidade_ethernet', conn)
     valores_ethernet_ = pd.read_sql('SELECT * FROM valores_terceiros_eth_filtered', engine)
-    valores_ethernet_.to_csv('valores_ethernet.csv',index=False)
+    valores_ethernet_.to_csv('./arquivos/valores_ethernet.csv',index=False)
     status = pd.read_sql('SELECT * FROM status', engine)
-    status.to_excel('status.xlsx',index=False)
+    status.to_excel('./arquivos/status.xlsx',index=False)
+    base_ouro = pd.read_sql('SELECT * FROM base_ouro', engine)
+    base_ouro.to_excel('./arquivos/base_ouro.xlsx',index=False)
+    base_prata = pd.read_sql('SELECT * FROM base_prata', engine)
+    base_prata.to_excel('./arquivos/base_prata.xlsx',index=False)
     capacity_funil = pd.read_sql('SELECT * FROM capacity_funil', engine)
     capacity_funil.to_excel('./arquivos/capacity_funil.xlsx',index=False)
     # conn.close()
@@ -41,9 +46,10 @@ try:
 except:
     # provedor_ethernet = pd.read_excel('./arquivos/provedorxlocalidade_ethernet.xlsx')
     valores_ethernet_ = pd.read_csv('./arquivos/valores_ethernet.csv')
+    base_ouro = pd.read_excel('./arquivos/base_ouro.xlsx')
+    base_prata = pd.read_excel('./arquivos/base_prata.xlsx')
     status = pd.read_excel('./arquivos/status.xlsx')
     capacity_funil = pd.read_excel('./arquivos/capacity_funil.xlsx')
-    status = pd.read_excel('./arquivos/capacity_funil.xlsx')
     status = status.fillna('OK')
     pass
 
@@ -67,7 +73,7 @@ fechamento_teia = pd.DataFrame(columns=['sequencial','latitude','longitude','uf'
 
 # facilidades = pd.read_excel('./arquivos/facilidades.xlsx').sort_values('PRIORIDADE',ascending=True).fillna('')
 facilidades = pd.read_excel('./arquivos/facilidades_tecnologia_prioridade.xlsx').sort_values('PRIORIDADE',ascending=True).fillna('')
-
+facilidades = facilidades.reset_index(drop=True)
 
 
 def arquivo_teia():
@@ -82,6 +88,8 @@ def arquivo_teia():
     sevs_tratar = teia.drop(index=teia[teia.SEV.isin(removidas)].index).reset_index(drop=True)
 
     sevs_tratar['PONTA_A'] = sevs_tratar['PONTA_A'].fillna('')
+    sevs_tratar['FACILIDADE_ACESSO'] = ''
+    sevs_tratar['CENTRO_ROTEAMENTO'] = ''
 
     for index, value in sevs_tratar.iterrows():
         aux = municipio_localidade[municipio_localidade.SIGLA_LOC == value.CNL]
@@ -148,7 +156,7 @@ def selecionar_restricao():
     button_restricao.place(x=245, y=200)
 
 def tratar_sevs():
-    global nuvens, valores_ethernet_, sevs_tratar,status
+    global nuvens, valores_ethernet_, sevs_tratar,status,base_prata,base_ouro
     sevs_tratar = teia.drop(index=teia[teia.SEV.isin(removidas)].index).reset_index(drop=True)
 
 
@@ -292,6 +300,7 @@ def tratar_sevs():
     valores_ethernet_['VEL'] = valores_ethernet_['VELOCIDADE'].apply(convert_velocidade)
     
     sevs_tratar['TRATADO'] = ''
+    sevs_tratar[['DESIGNACAO_BASE_OURO','ABORDADO_BASE_OURO','DESIGNACAO_BASE_PRATA','ABORDADO_BASE_PRATA']] = ''
 
     ## ESCOLHA DO ACESSO ABORDADO
     for index, value in sevs_tratar.iterrows():
@@ -326,7 +335,249 @@ def tratar_sevs():
                     sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = aux_resumosoe.ESTACAO_ENTREGA_ABORDADO.values[0]
                     sevs_tratar.at[index,'TRATADO'] = 'X'
 
+    base_ouro['latitude'] = base_ouro['latitude'].str.replace(',', '.', regex=False).astype(float)
+    base_ouro['longitude'] = base_ouro['longitude'].str.replace(',', '.', regex=False).astype(float)
 
+    sevs_tratar['LATITUDE'] = sevs_tratar['LATITUDE'].str.replace(',', '.', regex=False).astype(float)
+    sevs_tratar['LONGITUDE'] = sevs_tratar['LONGITUDE'].str.replace(',', '.', regex=False).astype(float)
+
+    for index, value in base_ouro.iterrows():
+        if value.acesso == 'DIRETO CLARO':
+            base_ouro.at[index, 'acesso'] = 'FO EDD DIRETO CLARO'
+            base_ouro.at[index, 'tecnologia'] = 'FO EDD DC'
+        if value.acesso == 'FO EDD':
+            base_ouro.at[index, 'acesso'] = 'FO EDD ETH'
+            base_ouro.at[index, 'tecnologia'] = 'FO EDD FIXA'
+        if value.acesso == 'FO EDD MOVEL':
+            base_ouro.at[index, 'acesso'] = 'FO EDD ETH'
+            base_ouro.at[index, 'tecnologia'] = 'FO EDD MOVEL'
+        if value.acesso == 'GPON':
+            base_ouro.at[index, 'acesso'] = 'FO GPON ETH'
+            base_ouro.at[index, 'tecnologia'] = 'GPON FIXA'
+        if value.acesso == 'GPON RESID':
+            base_ouro.at[index, 'acesso'] = 'FO GPON RESID ETH'
+            base_ouro.at[index, 'tecnologia'] = 'GPON RES RESID'
+        if value.acesso == 'XGSPON RESID':
+            base_ouro.at[index, 'acesso'] = 'FO XGSPON RESID ETH'
+            base_ouro.at[index, 'tecnologia'] = 'XGSPON RES RESID'
+        if value.acesso == 'EDD DIRETO CLARO':
+            base_ouro.at[index, 'acesso'] = 'FO EDD DIRETO CLARO'
+            base_ouro.at[index, 'tecnologia'] = 'FO EDD DC'
+        if value.acesso == 'SDH':
+            base_ouro.at[index, 'acesso'] = 'FO SDH'
+            base_ouro.at[index, 'tecnologia'] = 'SDH'
+        if value.acesso == 'NET FO VIVAX':
+            base_ouro.at[index, 'acesso'] = 'FOETHERNET'
+            base_ouro.at[index, 'tecnologia'] = 'FO EDD NET'
+        if value.acesso == 'HFC BSOD':
+            base_ouro.at[index, 'acesso'] = 'HFC BSOD'
+            base_ouro.at[index, 'tecnologia'] = 'HFC BSOD'
+        if value.acesso == 'GPON EBT':
+            base_ouro.at[index, 'acesso'] = 'FO GPON ETH'
+            base_ouro.at[index, 'tecnologia'] = 'GPON FIXA'
+        if value.acesso == 'FO ETHERNET':
+            base_ouro.at[index, 'acesso'] = 'FOETHERNET'
+            base_ouro.at[index, 'tecnologia'] = 'FO EDD NET'
+        if value.acesso == 'FO NET':
+            base_ouro.at[index, 'acesso'] = 'FOETHERNET'
+            base_ouro.at[index, 'tecnologia'] = 'FO EDD NET'
+        if value.acesso == 'VIVAX':
+            base_ouro.at[index, 'acesso'] = 'FOETHERNET'
+            base_ouro.at[index, 'tecnologia'] = 'FO EDD NET'
+
+    # 2. Transformar em GeoDataFrames
+    # Importante: Usar o WGS84 (EPSG:4326) que é o padrão de GPS (lat/lon)
+    gdf_sevs_tratar = gpd.GeoDataFrame(sevs_tratar, geometry=gpd.points_from_xy(sevs_tratar.LONGITUDE, sevs_tratar.LATITUDE), crs="EPSG:4326")
+    gdf_base_ouro = gpd.GeoDataFrame(base_ouro, geometry=gpd.points_from_xy(base_ouro.longitude, base_ouro.latitude), crs="EPSG:4326")
+
+    # 3. Mudar para uma projeção métrica (ex: SIRGAS 2000 / UTM) 
+    # Isso é crucial para que a distância seja calculada em metros, não em graus.
+    gdf_sevs_tratar = gdf_sevs_tratar.to_crs(epsg=31983) 
+    gdf_base_ouro = gdf_base_ouro.to_crs(epsg=31983)
+
+    # 4. Encontrar o vizinho mais próximo
+    df_distancias = gpd.sjoin_nearest(gdf_sevs_tratar, gdf_base_ouro, distance_col="distancia_metros")
+
+    df_distancias = df_distancias.drop(columns=['geometry','index_right','id','sev','latitude','longitude','classifica_acesso','data_report'])
+
+    data_prioridade = facilidades[['TECNOLOGIA']].to_dict()
+
+    mapa_prioridade = {v: k for k, v in data_prioridade['TECNOLOGIA'].items()}
+
+    df_distancias = df_distancias[(df_distancias.distancia_metros < 31) & (df_distancias.TRATADO != 'X')].drop_duplicates()
+
+    df_distancias['rank'] = df_distancias['tecnologia'].map(mapa_prioridade)
+
+    # 3. Ordenamos: Menores números (0, 1, 2) ficam no topo porque têm maior prioridade
+    # 'id_unico' deve ser a coluna que identifica o que é "duplicado" para você
+    df_principal = df_distancias.sort_values(by=['SEV', 'rank'])
+
+    # 4. Removemos as duplicadas mantendo a de maior prioridade (a primeira após o sort)
+    df_final = df_principal.drop_duplicates(subset=['SEV'], keep='first')
+
+    # 5. Removemos a coluna de rank para limpar o DF
+    df_final = df_final.drop(columns=['rank'])
+    df_sev_base_ouro_inviavel = pd.DataFrame(columns=['SEV','MOTIVO'])
+
+    for index, value in df_final[df_final.VEL > 100].iterrows():
+        aux_nuvens_abordado = nuvens[(nuvens.SEV == value.SEV) & (nuvens.TECNOLOGIA == value.tecnologia)].sort_values('CAPACITY_NUVEM',ascending=False)
+        if len(aux_nuvens_abordado) > 0:
+            if aux_nuvens_abordado.CAPACITY_NUVEM.values[0] >= value.VEL:
+                pass
+            else:
+                df_sev_base_ouro_inviavel.at[index,'SEV'] = value.SEV
+                df_sev_base_ouro_inviavel.at[index,'MOTIVO'] = 'ABORDADO OURO SEM CAPACIDADE DE BANDA'
+                df_final = df_final.drop(index=index)
+        else:    
+            df_sev_base_ouro_inviavel.at[index,'SEV'] = value.SEV
+            df_sev_base_ouro_inviavel.at[index,'MOTIVO'] = 'ABORDADO OURO SEM COBERTURA DE NUVEM'
+            df_final = df_final.drop(index=index)
+
+    df_sev_base_ouro_inviavel = df_sev_base_ouro_inviavel.reset_index(drop=True)
+    for index, value in df_final.iterrows():
+        if (value.tecnologia == 'HFC BSOD') & (value.VEL <= 50):
+            sevs_tratar.at[index,'TRATADO'] = 'X'
+            sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = value.acesso
+            sevs_tratar.at[index,'FACILIDADE_ACESSO'] = value.acesso.replace(' ','_')
+            sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = value.tecnologia
+            sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+            sevs_tratar.at[index,'ABORDADO_BASE_OURO'] = 'X'
+            sevs_tratar.at[index,'DESIGNACAO_BASE_OURO'] = value.designacao
+        if (value.acesso == 'FO GPON RESID ETH') & (value.VEL <= 500):
+            sevs_tratar.at[index,'TRATADO'] = 'X'
+            sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = value.acesso
+            sevs_tratar.at[index,'FACILIDADE_ACESSO'] = value.acesso.replace(' ','_')
+            sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = value.tecnologia
+            sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+            sevs_tratar.at[index,'ABORDADO_BASE_OURO'] = 'X'
+            sevs_tratar.at[index,'DESIGNACAO_BASE_OURO'] = value.designacao
+        if (value.acesso != 'FO GPON RESID ETH') & (value.acesso != 'HFC BSOD'):
+            sevs_tratar.at[index,'TRATADO'] = 'X'
+            sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = value.acesso
+            sevs_tratar.at[index,'FACILIDADE_ACESSO'] = value.acesso.replace(' ','_')
+            sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = value.tecnologia
+            sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+            sevs_tratar.at[index,'ABORDADO_BASE_OURO'] = 'X'
+            sevs_tratar.at[index,'DESIGNACAO_BASE_OURO'] = value.designacao
+        
+    sevs_tratar['ABORDADO_BASE_OURO'] = sevs_tratar['ABORDADO_BASE_OURO'].fillna('')
+    for index, value in base_prata.iterrows():
+        if value.tecnologia == 'FO EBT ETHERNET':
+            base_prata.at[index, 'acesso'] = 'FO EDD ETH'
+            base_prata.at[index, 'tecnologia'] = 'FO EDD FIXA'
+        if value.tecnologia == 'GPON':
+            base_prata.at[index, 'acesso'] = 'FO GPON ETH'
+            base_prata.at[index, 'tecnologia'] = 'GPON FIXA'
+        if value.tecnologia == 'GPON RESID':
+            base_prata.at[index, 'acesso'] = 'FO GPON RESID ETH'
+            base_prata.at[index, 'tecnologia'] = 'GPON RES RESID'
+        if value.tecnologia == 'GPON_RESID':
+            base_prata.at[index, 'acesso'] = 'FO GPON RESID ETH'
+            base_prata.at[index, 'tecnologia'] = 'GPON RES RESID'
+        if value.tecnologia == 'FO EDD DIRETO CLARO':
+            base_prata.at[index, 'acesso'] = 'FO EDD DIRETO CLARO'
+            base_prata.at[index, 'tecnologia'] = 'FO EDD DC'
+        if value.tecnologia == 'FO EDD PRE VIAVEL':
+            base_prata.at[index, 'acesso'] = 'FO EDD PRE VIAVEL'
+            base_prata.at[index, 'tecnologia'] = 'FO EDD PV'
+        if value.tecnologia == 'FO PTP (SDH)':
+            base_prata.at[index, 'acesso'] = 'FO SDH'
+            base_prata.at[index, 'tecnologia'] = 'SDH'
+        if value.tecnologia == 'FO EBT SDH':
+            base_prata.at[index, 'acesso'] = 'FO SDH'
+            base_prata.at[index, 'tecnologia'] = 'SDH'
+        if value.tecnologia == 'GPON':
+            base_prata.at[index, 'acesso'] = 'FO GPON ETH'
+            base_prata.at[index, 'tecnologia'] = 'GPON FIXA'
+        if value.tecnologia == 'NET FO ETHERNET':
+            base_prata.at[index, 'acesso'] = 'FOETHERNET'
+            base_prata.at[index, 'tecnologia'] = 'FO EDD NET'
+        if value.tecnologia == 'NET FO VIVAX':
+            base_prata.at[index, 'acesso'] = 'FOETHERNET'
+            base_prata.at[index, 'tecnologia'] = 'FO EDD NET'
+        if value.tecnologia == 'FO NET':
+            base_prata.at[index, 'acesso'] = 'FOETHERNET'
+            base_prata.at[index, 'tecnologia'] = 'FO EDD NET'
+    base_prata = base_prata[~base_prata.tecnologia.isin(['RD EDD DIRETO CLARO', 'RD EDD PRE VIAVEL'])]
+    base_prata['rank'] = base_prata['tecnologia'].map(mapa_prioridade)
+
+    # 3. Ordenamos: Menores números (0, 1, 2) ficam no topo porque têm maior prioridade
+    # 'id_unico' deve ser a coluna que identifica o que é "duplicado" para você
+    df_principal = base_prata.sort_values(by=['CEP_NUM', 'rank'])
+
+    # 4. Removemos as duplicadas mantendo a de maior prioridade (a primeira após o sort)
+    df_final = df_principal.drop_duplicates(subset=['CEP_NUM'], keep='first')
+
+    # 5. Removemos a coluna de rank para limpar o DF
+    df_final = df_final.drop(columns=['rank'])
+    for index, value in sevs_tratar[sevs_tratar.TRATADO == ''].iterrows():
+        aux_prata = df_final[df_final.CEP_NUM == f'{value.CEP}{value.NUMERO}']
+        if len(aux_prata) > 0:
+            if value.VEL > 100:
+                aux_nuvens_abordado = nuvens[(nuvens.SEV == value.SEV) & (nuvens.TECNOLOGIA == aux_prata.tecnologia.values[0])].sort_values('CAPACITY_NUVEM',ascending=False)
+                if len(aux_nuvens_abordado) > 1:
+                    if aux_nuvens_abordado.CAPACITY_NUVEM.values[0] >= value.VEL:
+                        if (aux_prata.tecnologia.values[0] == 'HFC BSOD') & (value.VEL <= 50):
+                            sevs_tratar.at[index,'TRATADO'] = 'X'
+                            sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = aux_prata.acesso.values[0]
+                            sevs_tratar.at[index,'FACILIDADE_ACESSO'] = aux_prata.acesso.values[0].replace(' ','_')
+                            sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = aux_prata.tecnologia.values[0]
+                            sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                            sevs_tratar.at[index,'ABORDADO_BASE_PRATA'] = 'X'
+                        if (aux_prata.acesso.values[0] == 'FO GPON RESID ETH') & (value.VEL <= 500):
+                            sevs_tratar.at[index,'TRATADO'] = 'X'
+                            sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = aux_prata.acesso.values[0]
+                            sevs_tratar.at[index,'FACILIDADE_ACESSO'] = aux_prata.acesso.values[0].replace(' ','_')
+                            sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = aux_prata.tecnologia.values[0]
+                            sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                            sevs_tratar.at[index,'ABORDADO_BASE_PRATA'] = 'X'
+                        if (aux_prata.acesso.values[0] != 'FO GPON RESID ETH') & (aux_prata.acesso.values[0] != 'HFC BSOD'):
+                            sevs_tratar.at[index,'TRATADO'] = 'X'
+                            sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = aux_prata.acesso.values[0]
+                            sevs_tratar.at[index,'FACILIDADE_ACESSO'] = aux_prata.acesso.values[0].replace(' ','_')
+                            sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = aux_prata.tecnologia.values[0]
+                            sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                            sevs_tratar.at[index,'ABORDADO_BASE_PRATA'] = 'X'        
+                    else:
+                        df_sev_base_ouro_inviavel.at[len(df_sev_base_ouro_inviavel),'SEV'] = value.SEV
+                        df_sev_base_ouro_inviavel.at[len(df_sev_base_ouro_inviavel) -1,'MOTIVO'] = 'ABORDADO PRATA SEM CAPACIDADE DE BANDA'
+                else:
+                    df_sev_base_ouro_inviavel.at[len(df_sev_base_ouro_inviavel),'SEV'] = value.SEV
+                    df_sev_base_ouro_inviavel.at[len(df_sev_base_ouro_inviavel) -1,'MOTIVO'] = 'ABORDADO PRATA SEM COBERTURA DE NUVEM'
+            else:
+                if (aux_prata.tecnologia.values[0] == 'HFC BSOD') & (value.VEL <= 50):
+                    sevs_tratar.at[index,'TRATADO'] = 'X'
+                    sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = aux_prata.acesso.values[0]
+                    sevs_tratar.at[index,'FACILIDADE_ACESSO'] = aux_prata.acesso.values[0].replace(' ','_')
+                    sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = aux_prata.tecnologia.values[0]
+                    sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                    sevs_tratar.at[index,'ABORDADO_BASE_PRATA'] = 'X'
+                if (aux_prata.acesso.values[0] == 'FO GPON RESID ETH') & (value.VEL <= 500):
+                    sevs_tratar.at[index,'TRATADO'] = 'X'
+                    sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = aux_prata.acesso.values[0]
+                    sevs_tratar.at[index,'FACILIDADE_ACESSO'] = aux_prata.acesso.values[0].replace(' ','_')
+                    sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = aux_prata.tecnologia.values[0]
+                    sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                    sevs_tratar.at[index,'ABORDADO_BASE_PRATA'] = 'X'
+                if (aux_prata.acesso.values[0] != 'FO GPON RESID ETH') & (aux_prata.acesso.values[0] != 'HFC BSOD'):
+                    sevs_tratar.at[index,'TRATADO'] = 'X'
+                    sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = aux_prata.acesso.values[0]
+                    sevs_tratar.at[index,'FACILIDADE_ACESSO'] = aux_prata.acesso.values[0].replace(' ','_')
+                    sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = aux_prata.tecnologia.values[0]
+                    sevs_tratar.at[index,'CENTRO_ROTEAMENTO'] = estacoes_uf[estacoes_uf.UF == value.UF].ESTACAO.values[0]
+                    sevs_tratar.at[index,'ABORDADO_BASE_PRATA'] = 'X'
+
+    sevs_tratar['ABORDADO_BASE_PRATA'] = sevs_tratar['ABORDADO_BASE_PRATA'].fillna('')
+    df_sev_base_ouro_inviavel.to_excel('RESUMO_INVIAVEL_ABORDADO.xlsx',index=False)
 
     for index, value in sevs_tratar[sevs_tratar.TRATADO == 'X'].iterrows():
         if value.SERVICO in ['LAN - LAN EPL','LAN - LAN EPL MEF']:
@@ -732,6 +983,10 @@ def gerar_arquivos_finais():
             if value.FACILIDADE_ACESSO != 'TERCEIROS_ETH':
                 fechamento_teia.at[len(fechamento_teia) - 1,'custo_de_acesso_proprio'] = str(round(value.CUSTO_ACESSO_PROPRIO,2)).replace('.',',')
                 fechamento_teia.at[len(fechamento_teia) - 1,'obs'] = f'FECHAMENTO NFV FASE 1/ ESTACAO ENTREGA {value.ESTACAO_ENTREGA_ACESSO}/{value.NUVEM_ACESSO}'
+                if value.ABORDADO_BASE_OURO == 'X':
+                    fechamento_teia.at[len(fechamento_teia) - 1,'obs'] += f'/ABORDADO BASE OURO/DESIG {value.DESIGNACAO_BASE_OURO}'
+                if value.ABORDADO_BASE_PRATA == 'X':
+                    fechamento_teia.at[len(fechamento_teia) - 1,'obs'] += '/ABORDADO BASE PRATA'
                 fechamento_teia.at[len(fechamento_teia) - 1,'tecnologia'] = value.TECNOLOGIA_ACESSO
 
             else:
@@ -762,6 +1017,10 @@ def gerar_arquivos_finais():
             if value.FACILIDADE_ACESSO != 'TERCEIROS_ETH':
                 fechamento_teia.at[len(fechamento_teia) - 1,'custo_de_acesso_proprio'] = str(round(value.CUSTO_ACESSO_PROPRIO,2)).replace('.',',')
                 fechamento_teia.at[len(fechamento_teia) - 1,'obs'] = f'FECHAMENTO NFV FASE 1/ ESTACAO ENTREGA {value.ESTACAO_ENTREGA_ACESSO}/{value.NUVEM_ACESSO}'
+                if value.ABORDADO_BASE_OURO == 'X':
+                    fechamento_teia.at[len(fechamento_teia) - 1,'obs'] += f'/ABORDADO BASE OURO/DESIG {value.DESIGNACAO_BASE_OURO}'
+                if value.ABORDADO_BASE_PRATA == 'X':
+                    fechamento_teia.at[len(fechamento_teia) - 1,'obs'] += '/ABORDADO BASE PRATA'
                 fechamento_teia.at[len(fechamento_teia) - 1,'tecnologia'] = value.TECNOLOGIA_ACESSO
 
             else:
