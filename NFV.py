@@ -337,10 +337,11 @@ def tratar_sevs():
 
     base_ouro['latitude'] = base_ouro['latitude'].str.replace(',', '.', regex=False).astype(float)
     base_ouro['longitude'] = base_ouro['longitude'].str.replace(',', '.', regex=False).astype(float)
-
-    sevs_tratar['LATITUDE'] = sevs_tratar['LATITUDE'].str.replace(',', '.', regex=False).astype(float)
-    sevs_tratar['LONGITUDE'] = sevs_tratar['LONGITUDE'].str.replace(',', '.', regex=False).astype(float)
-
+    try:
+        sevs_tratar['LATITUDE'] = sevs_tratar['LATITUDE'].str.replace(',', '.', regex=False).astype(float)
+        sevs_tratar['LONGITUDE'] = sevs_tratar['LONGITUDE'].str.replace(',', '.', regex=False).astype(float)
+    except:pass
+    
     for index, value in base_ouro.iterrows():
         if value.acesso == 'DIRETO CLARO':
             base_ouro.at[index, 'acesso'] = 'FO EDD DIRETO CLARO'
