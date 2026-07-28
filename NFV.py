@@ -41,6 +41,8 @@ try:
     base_prata.to_excel('./arquivos/base_prata.xlsx',index=False)
     capacity_funil = pd.read_sql('SELECT * FROM capacity_funil', engine)
     capacity_funil.to_excel('./arquivos/capacity_funil.xlsx',index=False)
+    custos_acesso = pd.read_sql('SELECT * FROM custos_nfv', engine)
+    custos_acesso.to_excel('./arquivos/custos_nfv.xlsx',index=False)
     # conn.close()
     status = status.fillna('OK')
 except:
@@ -51,13 +53,13 @@ except:
     status = pd.read_excel('./arquivos/status.xlsx')
     capacity_funil = pd.read_excel('./arquivos/capacity_funil.xlsx')
     status = status.fillna('OK')
+    custos_acesso = pd.read_excel('./arquivos/custos_nfv.xlsx')
     pass
 
 capacity = pd.read_excel('./arquivos/capacity.xlsx')
 municipio_estacao = pd.read_excel('./arquivos/bb_municipio_estacao.xlsx')
 estacoes_uf = pd.read_excel('./arquivos/estacoes_entregas.xlsx')
 cidades = pd.read_excel('./arquivos/cidades_bbip.xlsx')
-custos_acesso = pd.read_excel('./arquivos/custos_nfv.xlsx')
 tecnologia_facilidade = pd.read_excel('./arquivos/id_tecnologia_facilidades.xlsx')
 id_provedores = pd.read_excel('./arquivos/id_provedores.xlsx')
 capacity_fixa = pd.read_excel('./arquivos/capacity_fixa.xlsx')
@@ -134,7 +136,11 @@ def selecionar_resumosoe():
 def selecionar_nuvens():
     global nuvens
     arquivo_nuvens = ctk.filedialog.askopenfilename(title='Abrir arquivo nuvens')
-    nuvens = tratamento_gaia.tratamentoNuvens(f"{arquivo_nuvens}").trata_nuvens()
+    tratador = tratamento_gaia.tratamentoNuvens(f"{arquivo_nuvens}")
+    nuvens = tratador.trata_nuvens()
+    #EXIBE QUANTAS NAO FOI POSSIVEL TRATAR
+    if tratador.descartadas:
+        print(f'Atencao: {len(tratador.descartadas)} linha(s) precisam de conferencia manual')
     nuvens.to_excel('arquivo_nuvens.xlsx',index=False)
     button_nuvens = ctk.CTkButton(janela,text="Nuvens",height=20,width=35,corner_radius=8,fg_color='green',hover_color='blue', command=selecionar_nuvens)
     button_nuvens.place(x=100,y=200)
