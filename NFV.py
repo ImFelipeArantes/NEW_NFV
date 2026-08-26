@@ -139,8 +139,6 @@ def selecionar_nuvens():
     tratador = tratamento_gaia.tratamentoNuvens(f"{arquivo_nuvens}")
     nuvens = tratador.trata_nuvens()
     #EXIBE QUANTAS NAO FOI POSSIVEL TRATAR
-    if tratador.descartadas:
-        print(f'Atencao: {len(tratador.descartadas)} linha(s) precisam de conferencia manual')
     nuvens.to_excel('arquivo_nuvens.xlsx',index=False)
     button_nuvens = ctk.CTkButton(janela,text="Nuvens",height=20,width=35,corner_radius=8,fg_color='green',hover_color='blue', command=selecionar_nuvens)
     button_nuvens.place(x=100,y=200)
@@ -415,7 +413,7 @@ def tratar_sevs():
 
     mapa_prioridade = {v: k for k, v in data_prioridade['TECNOLOGIA'].items()}
 
-    df_distancias = df_distancias[(df_distancias.distancia_metros < 31) & (df_distancias.TRATADO != 'X')].drop_duplicates()
+    df_distancias = df_distancias[(df_distancias.distancia_metros < 1) & (df_distancias.TRATADO != 'X')].drop_duplicates()
 
     df_distancias['rank'] = df_distancias['tecnologia'].map(mapa_prioridade)
 
