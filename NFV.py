@@ -188,7 +188,7 @@ def tratar_sevs():
         aux_capcity = tecnologia_capacity[tecnologia_capacity.TECNOLOGIA == v.TECNOLOGIA]
         if len(aux_capcity) > 0:
             if aux_capcity.CAPACITY.values[0] not in ['SIGLA_ESTACAO_CLARO','ESTACAO_ENTREGA']:
-                if v.TECNOLOGIA == 'VIRTUA':
+                if (v.TECNOLOGIA == 'VIRTUA HFC') | (v.TECNOLOGIA == 'VIRTUA GPON'):
                     if sevs_tratar[sevs_tratar.SEV == v.SEV].SERVICO.values[0] == 'VPE - VIP BSOD LIGHT':
                         nuvens.at[i,'CAPACITY_NUVEM'] = 1000
                     else:
@@ -267,7 +267,7 @@ def tratar_sevs():
                                 nuvens.at[i,'CAPACITY_NUVEM'] = 10
                 
     nuvens['CAPACITY_NUVEM'] = nuvens['CAPACITY_NUVEM'].fillna(0)
-
+    nuvens.to_excel('NUVENS_BANDA.xlsx',index=False)
     resumosoe['BANDA_ABORDADO'] = 0
     resumosoe['FACILIDADE_ABORDADO'] = resumosoe['FACILIDADE_ABORDADO'].fillna('')
 
@@ -597,7 +597,7 @@ def tratar_sevs():
                 sevs_tratar.at[index,'TRATADO'] = ''
                 sevs_tratar.at[index,'FACILIDADE_ABORDADO'] = ''
 
-    nuvens.NOME_NUVEM = nuvens.NOME_NUVEM.replace(' ','')
+    nuvens.NOME_NUVEM = nuvens.NOME_NUVEM.fillna('').astype(str).str.strip()
 
 
 
@@ -617,6 +617,23 @@ def tratar_sevs():
             if resumosoe.at[index,f'{v.FACILIDADE}_INFORMACAO'] == '':
                 resumosoe.at[index,f'{v.FACILIDADE}_INFORMACAO'] = resumosoe.at[index,f'{v.FACILIDADE}_ESTACAO_ENTREGA']
 
+
+    def selecionar_nuvem_compativel(df_nuvens, sev, tecnologia, nome_nuvem='', estacao_entrega=''):
+        """Seleciona a nuvem sem depender exclusivamente do nome textual do ResumoSoE."""
+        candidatos = df_nuvens[(df_nuvens.SEV == sev) & (df_nuvens.TECNOLOGIA == tecnologia)].copy()
+        if candidatos.empty:
+            return candidatos
+        nome = str(nome_nuvem).strip()
+        estacao = str(estacao_entrega).strip()
+        if nome:
+            exato = candidatos[candidatos.NOME_NUVEM.astype(str).str.strip() == nome]
+            if not exato.empty:
+                return exato
+        if estacao:
+            por_estacao = candidatos[candidatos.ESTACAO_ENTREGA.astype(str).str.strip() == estacao]
+            if not por_estacao.empty:
+                return por_estacao
+        return candidatos if len(candidatos) == 1 else candidatos.iloc[0:0]
 
     for index, value in sevs_tratar.iterrows():
         aux_resumosoe = resumosoe[resumosoe.SEV == value.SEV]
@@ -653,52 +670,69 @@ def tratar_sevs():
                                 sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = 'LTE (4G)'
                                 sevs_tratar.at[index,'TRATADO'] = 'X'
                                 break
-                            elif v.FACILIDADE == 'FO_GPON_RESID_ETH_PRE_VIAVEL':
-                                for tec in v.TECNOLOGIA.split('/'):
-                                    if sevs_tratar.at[index,'TRATADO'] != 'X':
-                                        for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
-                                            aux_nuvem = nuvens[(nuvens.SEV == value.SEV) & (nuvens.NOME_NUVEM == nome_nuvem) & (nuvens.TECNOLOGIA == tec)]
-                                            if len(aux_nuvem) > 0:
-                                                if value.VEL <= aux_nuvem.CAPACITY_NUVEM.values[0]:
-                                                    sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
-                                                    sevs_tratar.at[index,'NUVEM_ACESSO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
-                                                    sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0] 
-                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = tec
-                                                    sevs_tratar.at[index,'TRATADO'] = 'X'
-                                                    break
-                            elif v.FACILIDADE == 'FO_XGSPON_RESID_ETH':
-                                for tec in v.TECNOLOGIA.split('/'):
-                                    if sevs_tratar.at[index,'TRATADO'] != 'X':
-                                        for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
-                                            aux_nuvem = nuvens[(nuvens.SEV == value.SEV) & (nuvens.NOME_NUVEM == nome_nuvem) & (nuvens.TECNOLOGIA == tec)]
-                                            if len(aux_nuvem) > 0:
-                                                if value.VEL <= aux_nuvem.CAPACITY_NUVEM.values[0]:
-                                                    sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
-                                                    sevs_tratar.at[index,'NUVEM_ACESSO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
-                                                    sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0] 
-                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = tec
-                                                    sevs_tratar.at[index,'TRATADO'] = 'X'
-                                                    break
                             elif v.FACILIDADE == 'FO_GPON_RESID_ETH':
                                 for tec in v.TECNOLOGIA.split('/'):
                                     if sevs_tratar.at[index,'TRATADO'] != 'X':
-                                        for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
-                                            aux_nuvem = nuvens[(nuvens.SEV == value.SEV) & (nuvens.NOME_NUVEM == nome_nuvem) & (nuvens.TECNOLOGIA == tec)]
-                                            if len(aux_nuvem) > 0:
-                                                if value.VEL <= aux_nuvem.CAPACITY_NUVEM.values[0]:
-                                                    sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
-                                                    sevs_tratar.at[index,'NUVEM_ACESSO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
-                                                    sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0] 
-                                                    if value.SERVICO == 'VPE - VIP BSOD LIGHT':
-                                                        sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = 'VIRTUA GPON'
-                                                        sevs_tratar.at[index,'TRATADO'] = 'X'
-                                                        break
-                                                    else:
-                                                        if tec != 'VIRTUA GPON':
-                                                            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = tec
+                                        if v.TECNOLOGIA == 'GPON RES MOVEL':
+                                            for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
+                                                aux_nuvem = selecionar_nuvem_compativel(nuvens, value.SEV, tec, nome_nuvem, aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0])
+                                                if len(aux_nuvem) > 0:
+                                                    if value.VEL <= aux_nuvem.CAPACITY_NUVEM.values[0]:
+                                                        sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
+                                                        sevs_tratar.at[index,'NUVEM_ACESSO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
+                                                        sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0] 
+                                                        if value.SERVICO == 'VPE - VIP BSOD LIGHT':
+                                                            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = 'VIRTUA GPON'
                                                             sevs_tratar.at[index,'TRATADO'] = 'X'
                                                             break
-                                                    
+                                                        else:
+                                                            if tec != 'VIRTUA GPON':
+                                                                sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = tec
+                                                                sevs_tratar.at[index,'TRATADO'] = 'X'
+                                                                break
+                                        elif v.TECNOLOGIA == 'GPON RES RESID':
+                                            sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
+                                            sevs_tratar.at[index,'NUVEM_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0]
+                                            sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
+                                            if value.SERVICO == 'VPE - VIP BSOD LIGHT':
+                                                sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = 'VIRTUA GPON'
+                                                sevs_tratar.at[index,'TRATADO'] = 'X'
+                                                break
+                                            else:
+                                                if tec != 'VIRTUA GPON':
+                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = tec
+                                                    sevs_tratar.at[index,'TRATADO'] = 'X'
+                                                    break
+                            elif v.FACILIDADE == 'FO_GPON_RESID_ETH_PRE_VIAVEL':
+                                for tec in v.TECNOLOGIA.split('/'):
+                                    if sevs_tratar.at[index,'TRATADO'] != 'X':
+                                        sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
+                                        sevs_tratar.at[index,'NUVEM_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0]
+                                        sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0] 
+                                        sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = tec
+                                        sevs_tratar.at[index,'TRATADO'] = 'X'
+                                        break
+                            elif v.FACILIDADE == 'FO_XGSPON_RESID_ETH':
+                                for tec in v.TECNOLOGIA.split('/'):
+                                    if sevs_tratar.at[index,'TRATADO'] != 'X':
+                                        if v.TECNOLOGIA == 'XGSPON RES MOVEL':
+                                            for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
+                                                aux_nuvem = selecionar_nuvem_compativel(nuvens, value.SEV, tec, nome_nuvem, aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0])
+                                                if len(aux_nuvem) > 0:
+                                                    if value.VEL <= aux_nuvem.CAPACITY_NUVEM.values[0]:
+                                                        sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
+                                                        sevs_tratar.at[index,'NUVEM_ACESSO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
+                                                        sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0] 
+                                                        sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = tec
+                                                        sevs_tratar.at[index,'TRATADO'] = 'X'
+                                                        break
+                                        elif v.TECNOLOGIA == 'XGSPON RES RESID':
+                                            sevs_tratar.at[index,'FACILIDADE_ACESSO'] = v.FACILIDADE
+                                            sevs_tratar.at[index,'NUVEM_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0]
+                                            sevs_tratar.at[index,'ESTACAO_ENTREGA_ACESSO'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
+                                            sevs_tratar.at[index,'TECNOLOGIA_ACESSO'] = tec
+                                            sevs_tratar.at[index,'TRATADO'] = 'X'
+                                            break
                                                    
 
                             elif (v.FACILIDADE == 'SATELITE_BANDA_KA') | (v.FACILIDADE == 'SATELITE_BANDA_KU'):
