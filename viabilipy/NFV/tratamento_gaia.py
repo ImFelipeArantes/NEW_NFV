@@ -7,37 +7,124 @@ facilidades = pd.read_excel('./arquivos/facilidades.xlsx').FACILIDADE.tolist()
 class tratamentoResumosoe():
 
     def __init__(self,arq):
-        file = open(arq, 'r', encoding="utf8")
-        self.__resumo_soe = file.readlines()
-        file.close()
+        self.__resumo_soe = pd.read_csv(arq, sep = r'\t')
+
 
 
     def trata_resumosoe(self):
-        for i in range(len(self.__resumo_soe)):
-            self.__resumo_soe[i] = self.__resumo_soe[i].removesuffix('\n')
-            self.__resumo_soe[i] = self.__resumo_soe[i].split("\t")
 
-        acum = 0
-        while acum < len(self.__resumo_soe[0]):
-            self.__resumo_soe[0][acum] = self.__resumo_soe[0][acum].replace(" ","_").upper()
-            if self.__resumo_soe[0][acum] == '%DISPONIBILIDADE':
-                self.__resumo_soe[0][acum] = self.__resumo_soe[0][acum].replace('%','')
-            acum += 1
-        acum_resumo = 0
-        acum_facilidade = 0
-        while acum_resumo < len(self.__resumo_soe[0]):
-            if self.__resumo_soe[0][acum_resumo] == facilidades[acum_facilidade]:
-                self.__resumo_soe[0][acum_resumo + 1] = f'{self.__resumo_soe[0][acum_resumo]}_{unidecode(self.__resumo_soe[0][acum_resumo + 1])}'
-                self.__resumo_soe[0][acum_resumo + 2] = f'{self.__resumo_soe[0][acum_resumo]}_{unidecode(self.__resumo_soe[0][acum_resumo + 2])}'
-                self.__resumo_soe[0][acum_resumo + 3] = f'{self.__resumo_soe[0][acum_resumo]}_{unidecode(self.__resumo_soe[0][acum_resumo + 3])}'
-                if acum_facilidade < len(facilidades)-1:
-                    acum_facilidade += 1
-            acum_resumo += 1
+        colunas_resumosoe = ['ID',
+        'SEV',
+        'GEOCODE_OK',
+        'LATITUDE',
+        'LONGITUDE',
+        'DEGRAU_PARA_TERCEIROS',
+        'RESTRICAO',
+        '4G',
+        '4G_INFORMACAO',
+        '4G_ESTACAO_ENTREGA',
+        '4G_TECNOLOGIA',
+        'FO_GPON_RESID_ETH',
+        'FO_GPON_RESID_ETH_INFORMACAO',
+        'FO_GPON_RESID_ETH_ESTACAO_ENTREGA',
+        'FO_GPON_RESID_ETH_TECNOLOGIA',
+        'FO_XGSPON_RESID_ETH',
+        'FO_XGSPON_RESID_ETH_INFORMACAO',
+        'FO_XGSPON_RESID_ETH_ESTACAO_ENTREGA',
+        'FO_XGSPON_RESID_ETH_TECNOLOGIA',
+        'HFC_BSOD',
+        'HFC_BSOD_INFORMACAO',
+        'HFC_BSOD_ESTACAO_ENTREGA',
+        'HFC_BSOD_TECNOLOGIA',
+        'FO_GPON_RESID_ETH_PRE_VIAVEL',
+        'FO_GPON_RESID_ETH_PRE_VIAVEL_INFORMACAO',
+        'FO_GPON_RESID_ETH_PRE_VIAVEL_ESTACAO_ENTREGA',
+        'FO_GPON_RESID_ETH_PRE_VIAVEL_TECNOLOGIA',
+        'FO_GPON_ETH',
+        'FO_GPON_ETH_INFORMACAO',
+        'FO_GPON_ETH_ESTACAO_ENTREGA',
+        'FO_GPON_ETH_TECNOLOGIA',
+        'FO_EDD_DIRETO_CLARO',
+        'FO_EDD_DIRETO_CLARO_INFORMACAO',
+        'FO_EDD_DIRETO_CLARO_ESTACAO_ENTREGA',
+        'FO_EDD_DIRETO_CLARO_TECNOLOGIA',
+        'FO_EDD_CLARO_PRE_VIAVEL',
+        'FO_EDD_CLARO_PRE_VIAVEL_INFORMACAO',
+        'FO_EDD_CLARO_PRE_VIAVEL_ESTACAO_ENTREGA',
+        'FO_EDD_CLARO_PRE_VIAVEL_TECNOLOGIA',
+        'FO_EDD_ETH',
+        'FO_EDD_ETH_INFORMACAO',
+        'FO_EDD_ETH_ESTACAO_ENTREGA',
+        'FO_EDD_ETH_TECNOLOGIA',
+        'FOETHERNET',
+        'FOETHERNET_INFORMACAO',
+        'FOETHERNET_ESTACAO_ENTREGA',
+        'FOETHERNET_TECNOLOGIA',
+        'FO_SDH',
+        'FO_SDH_INFORMACAO',
+        'FO_SDH_ESTACAO_ENTREGA',
+        'FO_SDH_TECNOLOGIA',
+        'ADE_SDH',
+        'ADE_SDH_INFORMACAO',
+        'ADE_SDH_ESTACAO_ENTREGA',
+        'ADE_SDH_TECNOLOGIA',
+        'SATELITE_BANDA_KA',
+        'SATELITE_BANDA_KA_INFORMACAO',
+        'SATELITE_BANDA_KA_ESTACAO_ENTREGA',
+        'SATELITE_BANDA_KA_TECNOLOGIA',
+        'SATELITE_BANDA_KU',
+        'SATELITE_BANDA_KU_INFORMACAO',
+        'SATELITE_BANDA_KU_ESTACAO_ENTREGA',
+        'SATELITE_BANDA_KU_TECNOLOGIA',
+        'TERCEIROS_ETH',
+        'TERCEIROS_ETH_INFORMACAO',
+        'TERCEIROS_ETH_ESTACAO_ENTREGA',
+        'TERCEIROS_ETH_TECNOLOGIA',
+        'RADIO_IP',
+        'RADIO_IP_INFORMACAO',
+        'RADIO_IP_ESTACAO_ENTREGA',
+        'RADIO_IP_TECNOLOGIA',
+        'ID_ACESSO_ABORDADO',
+        'FACILIDADE_ABORDADO',
+        'TECNOLOGIA_ABORDADO',
+        'ESTACAO_ENTREGA_ABORDADO']
 
-        df = pd.DataFrame(np.array(self.__resumo_soe[1:]), columns=self.__resumo_soe[0])
-        df[['ID', 'SEV']] = df[['ID', 'SEV']].apply(pd.to_numeric)
+        # for i in range(len(self.__resumo_soe)):
+        #     self.__resumo_soe[i] = self.__resumo_soe[i].removesuffix('\n')
+        #     self.__resumo_soe[i] = self.__resumo_soe[i].split("\t")
 
-        return df
+        # acum = 0
+        # while acum < len(self.__resumo_soe[0]):
+        #     self.__resumo_soe[0][acum] = self.__resumo_soe[0][acum].replace(" ","_").upper()
+        #     if self.__resumo_soe[0][acum] == '%DISPONIBILIDADE':
+        #         self.__resumo_soe[0][acum] = self.__resumo_soe[0][acum].replace('%','')
+        #     acum += 1
+        # acum_resumo = 0
+        # acum_facilidade = 0
+        # while acum_resumo < len(self.__resumo_soe[0]):
+        #     if self.__resumo_soe[0][acum_resumo] == facilidades[acum_facilidade]:
+        #         self.__resumo_soe[0][acum_resumo + 1] = f'{self.__resumo_soe[0][acum_resumo]}_{unidecode(self.__resumo_soe[0][acum_resumo + 1])}'
+        #         self.__resumo_soe[0][acum_resumo + 2] = f'{self.__resumo_soe[0][acum_resumo]}_{unidecode(self.__resumo_soe[0][acum_resumo + 2])}'
+        #         self.__resumo_soe[0][acum_resumo + 3] = f'{self.__resumo_soe[0][acum_resumo]}_{unidecode(self.__resumo_soe[0][acum_resumo + 3])}'
+        #         if acum_facilidade < len(facilidades)-1:
+        #             acum_facilidade += 1
+        #     acum_resumo += 1
+
+        # df = pd.DataFrame(np.array(self.__resumo_soe[1:]), columns=self.__resumo_soe[0])
+        # df[['ID', 'SEV']] = df[['ID', 'SEV']].apply(pd.to_numeric)
+        self.__resumo_soe.columns = colunas_resumosoe
+        self.__resumo_soe = self.__resumo_soe.fillna('')
+
+        for i,v in self.__resumo_soe.iterrows():
+            if ' / ' in v.FO_EDD_ETH_INFORMACAO:
+
+                self.__resumo_soe.at[i,'FO_EDD_ETH_INFORMACAO'] = v.FO_EDD_ETH_INFORMACAO.replace(' / ',f"{'NUVEM FO EDD ETH / '*v.FO_EDD_ETH_INFORMACAO.count('/')}")
+                if self.__resumo_soe.at[i,'FO_EDD_ETH_INFORMACAO'][-2] == '/':
+                    self.__resumo_soe.at[i,'FO_EDD_ETH_INFORMACAO'] = self.__resumo_soe.at[i,'FO_EDD_ETH_INFORMACAO'][:-3]
+
+        self.__resumo_soe['FO_EDD_ETH_INFORMACAO'] = self.__resumo_soe['FO_EDD_ETH_INFORMACAO'].replace('','NUVEM: NUVEM FO EDD ETH')
+
+        return self.__resumo_soe
     
 class tratamentoResultado():
 
@@ -149,6 +236,8 @@ class tratamentoNuvens():
        
     def trata_nuvens(self):
         nuvens_df = self.df.drop(index=self.df[self.df.Camada == 'Nuvens Terceiros Rádio IP'].index.to_list(),columns=['POSICAO','Camada','OBJECTID']).drop_duplicates().reset_index(drop=True)
+
+        nuvens_df['NOME_NUVEM'] = nuvens_df['NOME_NUVEM'].replace(' ','NUVEM FO EDD ETH')
 
         return nuvens_df
     
