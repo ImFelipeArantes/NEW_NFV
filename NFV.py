@@ -46,7 +46,7 @@ try:
     capacity = pd.read_sql('SELECT * FROM capacity_sdh_net', engine)
     capacity.to_excel('./arquivos/capacity.xlsx',index=False)
     capacity_fixa = pd.read_sql('SELECT * FROM capacity_fixa', engine)
-    capacity.rename(columns={'NUVEM_ABORDADO':'NUVEM'}).replace('FOetherNET','FO EDD NET').NUVEM.unique()
+    capacity = capacity.rename(columns={'NUVEM_ABORDADO':'NUVEM'}).replace('FOetherNET','FO EDD NET').NUVEM.unique()
     capacity_fixa.to_excel('./arquivos/capacity_fixa.xlsx',index=False)
     # conn.close()
     status = status.fillna('OK')
